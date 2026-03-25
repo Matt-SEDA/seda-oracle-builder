@@ -88,6 +88,7 @@ export default function ConnectStep({ deployResult, assetSymbol, onBack }: Props
   const [activeTab, setActiveTab] = useState<CodeTab>('curl');
   const [copied, setCopied] = useState(false);
   const [parsedPrice, setParsedPrice] = useState<number | null>(null);
+  const [showKey, setShowKey] = useState(false);
 
   const handleTest = async () => {
     if (!apiKey.trim()) return;
@@ -162,13 +163,36 @@ export default function ConnectStep({ deployResult, assetSymbol, onBack }: Props
 
         <div className="test-panel">
           <div className="test-panel__row">
-            <input
-              className="test-panel__input"
-              type="text"
-              placeholder="fast_main_xxxxxxxxxxxxxxxx..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
+            <div className="test-panel__input-wrap">
+              <input
+                className="test-panel__input"
+                type={showKey ? 'text' : 'password'}
+                placeholder="fast_main_xxxxxxxxxxxxxxxx..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                autoComplete="off"
+              />
+              {apiKey && (
+                <button
+                  className="test-panel__toggle"
+                  onClick={() => setShowKey(!showKey)}
+                  type="button"
+                  aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                >
+                  {showKey ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              )}
+            </div>
             <button className="btn btn--success" onClick={handleTest} disabled={!apiKey.trim() || isTesting}>
               {isTesting ? 'Executing...' : 'Execute'}
             </button>
