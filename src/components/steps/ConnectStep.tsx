@@ -48,14 +48,17 @@ export default function ConnectStep({ deployResult, onBack }: Props) {
     setTestResult(null);
     setTestError(null);
 
-    const result = await callFastApi(deployResult.programId, apiKey.trim());
+    const result = await callFastApi(
+      deployResult.programId,
+      apiKey.trim(),
+      deployResult.execInputs,
+    );
 
     if (result.success) {
       setTestResult(typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2));
     } else {
       setTestError(result.error || 'Unknown error');
     }
-
     setIsTesting(false);
   };
 
@@ -76,10 +79,9 @@ export default function ConnectStep({ deployResult, onBack }: Props) {
       <div className="step-content fade-up">
         <h2 className="step-content__title">Connect via SEDA Fast</h2>
         <p className="step-content__subtitle">
-          Your Oracle Program is deployed. Now connect it to your application using SEDA Fast.
+          Your Oracle Program is deployed. Connect it to your application using SEDA Fast for sub-50ms latency.
         </p>
 
-        {/* Program ID */}
         <div className="program-id-card">
           <div className="program-id-card__label">Your Oracle Program ID</div>
           <div className="program-id-card__value">{deployResult.programId}</div>
@@ -90,18 +92,13 @@ export default function ConnectStep({ deployResult, onBack }: Props) {
         </div>
       </div>
 
-      {/* CTA Section */}
+      {/* CTA */}
       <div className="cta-section fade-up" style={{ animationDelay: '0.1s' }}>
         <h3 className="cta-section__title">Get Your SEDA Fast API Key</h3>
         <p className="cta-section__text">
-          To execute your Oracle Program via SEDA Fast (sub-50ms latency), you need an API key. Start with a free 7-day trial.
+          Execute your Oracle Program via SEDA Fast with sub-50ms latency. Start with a free 7-day trial.
         </p>
-        <a
-          href="https://seda.xyz/dev"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn--primary btn--large"
-        >
+        <a href="https://seda.xyz/dev" target="_blank" rel="noopener noreferrer" className="btn btn--primary btn--large">
           Get API Key <ExternalLinkIcon />
         </a>
       </div>
@@ -122,49 +119,28 @@ export default function ConnectStep({ deployResult, onBack }: Props) {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />
-            <button
-              className="btn btn--success"
-              onClick={handleTest}
-              disabled={!apiKey.trim() || isTesting}
-            >
+            <button className="btn btn--success" onClick={handleTest} disabled={!apiKey.trim() || isTesting}>
               {isTesting ? 'Executing...' : 'Execute'}
             </button>
           </div>
-
-          {testResult && (
-            <div className="test-panel__result">{testResult}</div>
-          )}
-          {testError && (
-            <div className="test-panel__result test-panel__error">{testError}</div>
-          )}
+          {testResult && <div className="test-panel__result">{testResult}</div>}
+          {testError && <div className="test-panel__result test-panel__error">{testError}</div>}
         </div>
       </div>
 
       {/* Code Examples */}
       <div className="step-content fade-up" style={{ animationDelay: '0.3s' }}>
         <h3 className="step-content__title" style={{ fontSize: '1.6rem' }}>Integration Examples</h3>
-        <p className="step-content__subtitle">
-          Ready-to-use code snippets for integrating your Oracle Program.
-        </p>
-
         <div className="code-tabs">
           <div className="code-tabs__bar">
             {(['curl', 'javascript', 'python'] as CodeTab[]).map((tab) => (
-              <button
-                key={tab}
-                className={`code-tab ${activeTab === tab ? 'code-tab--active' : ''}`}
-                onClick={() => setActiveTab(tab)}
-              >
+              <button key={tab} className={`code-tab ${activeTab === tab ? 'code-tab--active' : ''}`} onClick={() => setActiveTab(tab)}>
                 {tab === 'curl' ? 'cURL' : tab === 'javascript' ? 'JavaScript' : 'Python'}
               </button>
             ))}
           </div>
         </div>
-
-        <CodePreview
-          code={codeExamples[activeTab].code}
-          language={codeExamples[activeTab].lang}
-        />
+        <CodePreview code={codeExamples[activeTab].code} language={codeExamples[activeTab].lang} />
       </div>
 
       <div className="step-nav">

@@ -1,4 +1,14 @@
-import { DataSourceConfig, LogicTemplate } from './types';
+import { LogicTemplate } from './types';
+
+export interface DataSourceConfig {
+  provider: string;
+  feedType: string;
+  feedBase: string;
+  feedQuote: string;
+  endpointUrl: string;
+  identifier: string;
+  assetName: string;
+}
 
 export function generateExecCode(
   template: LogicTemplate,

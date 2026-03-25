@@ -1,39 +1,40 @@
 'use client';
 
 import { useReducer, useMemo } from 'react';
-import { FeedEntry, WizardState, WizardAction, WizardStep } from '@/lib/types';
+import { WizardState, WizardAction, WizardStep } from '@/lib/types';
 import StepIndicator from './StepIndicator';
-import DataSourceStep from './steps/DataSourceStep';
+import AssetStep from './steps/AssetStep';
 import LogicStep from './steps/LogicStep';
-import BuildDeployStep from './steps/BuildDeployStep';
+import CompileStep from './steps/CompileStep';
 import ConnectStep from './steps/ConnectStep';
+
+const STEP_LABELS: [WizardStep, string][] = [
+  [1, 'Select Asset'],
+  [2, 'Select Logic'],
+  [3, 'Compile & Deploy'],
+  [4, 'Connect'],
+];
 
 const initialState: WizardState = {
   currentStep: 1,
-  dataSource: null,
+  asset: null,
   logic: null,
-  buildSteps: [],
+  compileResult: null,
   deployResult: null,
-  fastApiKey: '',
-  fastTestResult: null,
 };
 
 function reducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'SET_STEP':
       return { ...state, currentStep: action.step };
-    case 'SET_DATA_SOURCE':
-      return { ...state, dataSource: action.config, currentStep: 2 };
+    case 'SET_ASSET':
+      return { ...state, asset: action.selection, currentStep: 2, compileResult: null, deployResult: null };
     case 'SET_LOGIC':
-      return { ...state, logic: action.config, currentStep: 3 };
-    case 'UPDATE_BUILD_STEPS':
-      return { ...state, buildSteps: action.steps };
+      return { ...state, logic: action.selection, currentStep: 3, compileResult: null, deployResult: null };
+    case 'SET_COMPILE_RESULT':
+      return { ...state, compileResult: action.result };
     case 'SET_DEPLOY_RESULT':
       return { ...state, deployResult: action.result };
-    case 'SET_FAST_API_KEY':
-      return { ...state, fastApiKey: action.key };
-    case 'SET_FAST_RESULT':
-      return { ...state, fastTestResult: action.result };
     case 'GO_BACK':
       return { ...state, currentStep: Math.max(1, state.currentStep - 1) as WizardStep };
     default:
@@ -52,60 +53,54 @@ function SedaLogoIcon() {
   );
 }
 
-interface Props {
-  feeds: FeedEntry[];
-}
-
-export default function OracleBuilder({ feeds }: Props) {
+export default function OracleBuilder() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const completedSteps = useMemo(() => {
     const completed: number[] = [];
-    if (state.dataSource) completed.push(1);
+    if (state.asset) completed.push(1);
     if (state.logic) completed.push(2);
     if (state.deployResult) completed.push(3);
     return completed;
-  }, [state.dataSource, state.logic, state.deployResult]);
+  }, [state.asset, state.logic, state.deployResult]);
 
   return (
     <div className="page-wrapper">
-      {/* Hero */}
       <div className="hero fade-up">
         <h1 className="hero__title">
           <SedaLogoIcon />
           {' '}Oracle Program Builder
         </h1>
         <p className="hero__subtitle">
-          Build and deploy a SEDA Oracle Program in minutes. Select your data source, configure logic, and connect via SEDA Fast.
+          Build and deploy a SEDA Oracle Program in minutes. Select an asset, choose your logic, and connect via SEDA Fast.
         </p>
       </div>
 
-      {/* Step Indicator */}
       <StepIndicator currentStep={state.currentStep} completedSteps={completedSteps} />
 
-      {/* Active Step */}
       {state.currentStep === 1 && (
-        <DataSourceStep
-          feeds={feeds}
-          config={state.dataSource}
-          onComplete={(config) => dispatch({ type: 'SET_DATA_SOURCE', config })}
+        <AssetStep
+          selection={state.asset}
+          onComplete={(selection) => dispatch({ type: 'SET_ASSET', selection })}
         />
       )}
 
-      {state.currentStep === 2 && state.dataSource && (
+      {state.currentStep === 2 && state.asset && (
         <LogicStep
-          dataSource={state.dataSource}
-          config={state.logic}
-          onComplete={(config) => dispatch({ type: 'SET_LOGIC', config })}
+          asset={state.asset}
+          selection={state.logic}
+          onComplete={(selection) => dispatch({ type: 'SET_LOGIC', selection })}
           onBack={() => dispatch({ type: 'GO_BACK' })}
         />
       )}
 
-      {state.currentStep === 3 && state.dataSource && state.logic && (
-        <BuildDeployStep
-          dataSource={state.dataSource}
+      {state.currentStep === 3 && state.asset && state.logic && (
+        <CompileStep
+          asset={state.asset}
           logic={state.logic}
+          compileResult={state.compileResult}
           deployResult={state.deployResult}
+          onCompileComplete={(result) => dispatch({ type: 'SET_COMPILE_RESULT', result })}
           onDeployComplete={(result) => dispatch({ type: 'SET_DEPLOY_RESULT', result })}
           onBack={() => dispatch({ type: 'GO_BACK' })}
           onNext={() => dispatch({ type: 'SET_STEP', step: 4 })}
