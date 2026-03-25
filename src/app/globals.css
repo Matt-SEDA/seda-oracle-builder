@@ -1146,6 +1146,11 @@ input, select, textarea { font-family: inherit; }
   letter-spacing: -0.02em;
 }
 
+.price-result__value--raw {
+  font-size: 1.6rem;
+  color: var(--background-on-background-tertiary);
+}
+
 .price-result__source {
   font-size: 1.1rem;
   color: var(--background-on-background-quaternary);
@@ -1153,7 +1158,42 @@ input, select, textarea { font-family: inherit; }
 }
 
 @media (min-width: 640px) {
-  .price-result__value { font-size: 4rem; }
+  .price-result__value:not(.price-result__value--raw) { font-size: 4rem; }
+}
+
+/* ---- Raw response details ---- */
+.test-panel__details {
+  margin-top: var(--space-3);
+}
+
+.test-panel__summary {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--background-on-background-quaternary);
+  cursor: pointer;
+  padding: var(--space-2) 0;
+  transition: color 200ms ease;
+  list-style: none;
+}
+
+.test-panel__summary::-webkit-details-marker { display: none; }
+
+.test-panel__summary::before {
+  content: '\25B6';
+  display: inline-block;
+  margin-right: var(--space-2);
+  font-size: 0.9rem;
+  transition: transform 200ms ease;
+}
+
+.test-panel__details[open] .test-panel__summary::before {
+  transform: rotate(90deg);
+}
+
+.test-panel__summary:hover { color: var(--background-on-background); }
+
+.test-panel__details .test-panel__result {
+  margin-top: var(--space-2);
 }
 
 /* ---- Code tabs ---- */

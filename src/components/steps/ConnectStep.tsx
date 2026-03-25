@@ -36,42 +36,93 @@ interface Props {
 }
 
 /**
+ * Convert a hex string (big-endian u128) to a number scaled down by 1e6.
+ * The tally phase outputs price as big-endian u128 bytes scaled to 6 decimals.
+ */
+function hexToPrice(hex: string): number | null {
+  try {
+    const clean = hex.replace(/^0x/i, '');
+    if (!clean || !/^[0-9a-fA-F]+$/.test(clean)) return null;
+    const value = BigInt('0x' + clean);
+    if (value === BigInt(0)) return null;
+    const price = Number(value) / 1_000_000;
+    // Sanity check: price should be between $0.0001 and $1,000,000
+    if (price < 0.0001 || price > 1_000_000_000) return null;
+    return price;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert a base64 string (big-endian u128 bytes) to a price.
+ */
+function base64ToPrice(b64: string): number | null {
+  try {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    if (bytes.length === 0) return null;
+    let hex = '';
+    for (const b of bytes) hex += b.toString(16).padStart(2, '0');
+    return hexToPrice(hex);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Try to extract a human-readable USD price from the SEDA Fast API response.
- * The Oracle Program reports price scaled to 6 decimal places as u128 bytes.
- * The Fast API with encoding=json returns the result in various formats.
+ * The Oracle Program reports price as big-endian u128 scaled to 6 decimal places.
+ * The Fast API returns the result in various encodings depending on params.
  */
 function parsePrice(rawResult: string): number | null {
   try {
     const data = JSON.parse(rawResult);
 
-    // The result may contain exitCode and result fields
-    // result could be a hex string, base64, or contain the bytes
-    const result = data?.result;
+    // Collect all candidate result strings to try parsing
+    const candidates: string[] = [];
 
-    if (!result) return null;
-
-    // If result is a hex string (0x...)
-    if (typeof result === 'string' && result.startsWith('0x')) {
-      const hex = result.slice(2);
-      const value = BigInt('0x' + hex);
-      return Number(value) / 1_000_000;
+    // Direct result field (common Fast API response shape)
+    if (typeof data?.result === 'string') candidates.push(data.result);
+    // Nested result.result
+    if (typeof data?.result?.result === 'string') candidates.push(data.result.result);
+    // exitCode at top level with result
+    if (typeof data?.exitCode === 'number' && typeof data?.result === 'string') {
+      candidates.push(data.result);
+    }
+    // SEDA Fast may return tallyResult or execResult
+    if (typeof data?.tallyResult === 'string') candidates.push(data.tallyResult);
+    if (typeof data?.execResult === 'string') candidates.push(data.execResult);
+    // Array of results
+    if (Array.isArray(data?.results)) {
+      for (const r of data.results) {
+        if (typeof r?.result === 'string') candidates.push(r.result);
+        if (typeof r === 'string') candidates.push(r);
+      }
     }
 
-    // If result has a bytes/data field
-    if (result.result && typeof result.result === 'string' && result.result.startsWith('0x')) {
-      const hex = result.result.slice(2);
-      const value = BigInt('0x' + hex);
-      return Number(value) / 1_000_000;
+    // Try each candidate as hex first, then base64
+    for (const c of candidates) {
+      if (!c) continue;
+      // Hex string (0x prefix or pure hex)
+      if (/^(0x)?[0-9a-fA-F]+$/.test(c)) {
+        const price = hexToPrice(c);
+        if (price !== null) return price;
+      }
+      // Base64 string
+      if (/^[A-Za-z0-9+/]+=*$/.test(c) && c.length >= 4) {
+        const price = base64ToPrice(c);
+        if (price !== null) return price;
+      }
+      // Numeric string (already a number)
+      if (/^\d+$/.test(c)) {
+        const val = Number(BigInt(c)) / 1_000_000;
+        if (val > 0.0001 && val < 1_000_000_000) return val;
+      }
     }
 
-    // Try parsing numeric string directly
-    if (typeof result === 'string' && /^\d+$/.test(result)) {
-      return Number(BigInt(result)) / 1_000_000;
-    }
-
-    // If it's a number already
-    if (typeof result === 'number') {
-      return result / 1_000_000;
+    // If result is a number directly
+    if (typeof data?.result === 'number' && data.result > 0) {
+      return data.result / 1_000_000;
     }
 
     return null;
@@ -197,16 +248,27 @@ export default function ConnectStep({ deployResult, assetSymbol, onBack }: Props
               {isTesting ? 'Executing...' : 'Execute'}
             </button>
           </div>
-          {testResult && parsedPrice !== null && (
+          {testResult && (
             <div className="price-result fade-up">
               <div className="price-result__pair">{assetSymbol}/USD</div>
-              <div className="price-result__value">
-                ${parsedPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
-              </div>
+              {parsedPrice !== null ? (
+                <div className="price-result__value">
+                  ${parsedPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                </div>
+              ) : (
+                <div className="price-result__value price-result__value--raw">
+                  Executed successfully
+                </div>
+              )}
               <div className="price-result__source">via SEDA Oracle Program</div>
             </div>
           )}
-          {testResult && <div className="test-panel__result">{testResult}</div>}
+          {testResult && (
+            <details className="test-panel__details">
+              <summary className="test-panel__summary">Raw API Response</summary>
+              <div className="test-panel__result">{testResult}</div>
+            </details>
+          )}
           {testError && <div className="test-panel__result test-panel__error">{testError}</div>}
         </div>
       </div>
