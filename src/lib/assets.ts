@@ -23,9 +23,9 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
     assets: [
       { symbol: 'ETH', name: 'Ethereum', pythPriceFeedId: 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace' },
       { symbol: 'BTC', name: 'Bitcoin', pythPriceFeedId: 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43' },
-      { symbol: 'XRP', name: 'Ripple', pythPriceFeedId: 'ec5d399846a9209f3fe5881d70aae9268c94339ff9817c2a76c220c5e1a26838' },
-      { symbol: 'SOL', name: 'Solana', pythPriceFeedId: 'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d' },
-      { symbol: 'HYPE', name: 'Hyperliquid', pythPriceFeedId: '0bbf28e9a841a1cc788f6a361b17ca072d0ea3098a1e5df1c3922d06719579ff' },
+      { symbol: 'XRP', name: 'Ripple', pythPriceFeedId: 'ec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8' },
+      { symbol: 'SEDA', name: 'SEDA', pythPriceFeedId: '6abf75211b819e5933e96466760b0ae8c326c7057d8a681d229430347b0825f6' },
+      { symbol: 'HYPE', name: 'Hyperliquid', pythPriceFeedId: '4279e31cc369bbcc2faf022b382b080e32a8e689ff20fbc530d2a603eb6cd98b' },
     ],
   },
   {
@@ -33,8 +33,8 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
     label: 'Equities',
     assets: [
       { symbol: 'AAPL', name: 'Apple Inc.', pythPriceFeedId: '49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688' },
-      { symbol: 'TSLA', name: 'Tesla Inc.', pythPriceFeedId: '16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1571f0571' },
-      { symbol: 'NVDA', name: 'NVIDIA Corp.', pythPriceFeedId: '20a938f54b68f1f2ef18ea0328f6dd0747f8ea11486d22b021e83a900be89776' },
+      { symbol: 'TSLA', name: 'Tesla Inc.', pythPriceFeedId: '16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1' },
+      { symbol: 'NVDA', name: 'NVIDIA Corp.', pythPriceFeedId: 'b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593' },
       { symbol: 'AMZN', name: 'Amazon.com Inc.', pythPriceFeedId: 'b5d0e0fa58a1f8b81498ae670ce93c872d14434b72c364885d4fa1b257cbb07a' },
       { symbol: 'MSFT', name: 'Microsoft Corp.', pythPriceFeedId: 'd0ca23c1cc005e004ccf1db5bf76aeb6a49218f43dac3d4b275e92de12ded4d1' },
     ],
@@ -45,9 +45,9 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
     assets: [
       { symbol: 'XAU', name: 'Gold', pythPriceFeedId: '765d2ba906dbc32ca17cc11f5310a89e9ee1f6420508c63861f2f8ba4ee34bb2' },
       { symbol: 'XAG', name: 'Silver', pythPriceFeedId: 'f2fb02c32b055c805e7238d628e5e9dadef274376114eb1f012337cabe93871e' },
-      { symbol: 'WTI', name: 'Crude Oil (WTI)', pythPriceFeedId: 'c7c60099c12805bea1ae4df2243d6a888e678095a43b11239101f0e8b1a3e093' },
-      { symbol: 'XCU', name: 'Copper', pythPriceFeedId: 'a67c1b0df7454c9a2bab1aaca5c70b2d81e3d397db7a68b2a1fc6b0a4aaf4f2c' },
-      { symbol: 'NG', name: 'Natural Gas', pythPriceFeedId: '6d40e5b0d8f54e1e9b05c2c02f2b3b08f2e3a2f4dfe4f5ab0f3d4c3b2a1f0e1d' },
+      { symbol: 'WTI', name: 'Crude Oil (WTI)', pythPriceFeedId: '40d9903bd7a727ad128c89fca177d77d0175de6ea5c789a81473bf17bad64b39' },
+      { symbol: 'XCU', name: 'Copper', pythPriceFeedId: '636bedafa14a37912993f265eda22431a2be363ad41a10276424bbe1b7f508c4' },
+      { symbol: 'NG', name: 'Natural Gas', pythPriceFeedId: 'cbbe4de47ffd7681b33db9ebdf22eeb899046cbe566be06e875bf088324787ce' },
     ],
   },
   {
@@ -55,10 +55,10 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
     label: 'ETFs',
     assets: [
       { symbol: 'SPY', name: 'S&P 500 ETF', pythPriceFeedId: '19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5' },
-      { symbol: 'QQQ', name: 'Nasdaq-100 ETF', pythPriceFeedId: '98898ab537cd7b3e459f8b8c2de2e42c1ee2a0d38c6c0aee3e2f3e14f1d2c0b9' },
-      { symbol: 'IWM', name: 'Russell 2000 ETF', pythPriceFeedId: 'a3c9e5f8b2d4c6a8e0f2d4b6c8a0e2f4d6b8c0a2e4f6d8b0c2a4e6f8d0b2c4' },
-      { symbol: 'GLD', name: 'Gold ETF', pythPriceFeedId: 'b4d0e6f2a8c4e0b6d2f8a4c0e6b2d8f4a0c6e2b8d4f0a6c2e8b4d0f6a2c8e4' },
-      { symbol: 'TLT', name: '20+ Year Treasury ETF', pythPriceFeedId: 'c5e1f3a9b5d1e7c3f9a5b1d7e3c9f5a1b7d3e9c5f1a7b3d9e5c1f7a3b9d5e1' },
+      { symbol: 'QQQ', name: 'Nasdaq-100 ETF', pythPriceFeedId: '9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d' },
+      { symbol: 'IWM', name: 'Russell 2000 ETF', pythPriceFeedId: 'eff690a187797aa225723345d4612abec0bf0cec1ae62347c0e7b1905d730879' },
+      { symbol: 'GLD', name: 'Gold ETF', pythPriceFeedId: 'e190f467043db04548200354889dfe0d9d314c08b8d4e62fabf4d5a3140fecca' },
+      { symbol: 'TLT', name: '20+ Year Treasury ETF', pythPriceFeedId: '9f383d612ac09c7e6ffda24deca1502fce72e0ba58ff473fea411d9727401cc1' },
     ],
   },
 ];
