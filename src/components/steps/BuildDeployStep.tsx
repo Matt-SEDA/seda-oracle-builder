@@ -1,13 +1,46 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { DataSourceConfig, LogicConfig, BuildSubStep, DeployResult, SubStepStatus } from '@/lib/types';
-import { callMcp } from '@/lib/mcp-client';
+import { DataSourceConfig, LogicConfig, DeployResult } from '@/lib/types';
+import { connectKeplr, checkBalance, isKeplrInstalled, WalletInfo } from '@/lib/keplr';
+import { getDeployedProgramId } from '@/lib/programs';
 
-function PendingIcon() {
+/* ---- Icons ---- */
+
+function WalletIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
+      <path d="M21 12V7H5a2 2 0 010-4h14v4" />
+      <path d="M3 5v14a2 2 0 002 2h16v-5" />
+      <path d="M18 12a2 2 0 100 4 2 2 0 000-4z" />
+    </svg>
+  );
+}
+
+function DropletIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22a7 7 0 007-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 007 7z" />
+    </svg>
+  );
+}
+
+function RocketIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z" />
+      <path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z" />
+      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+      <path d="M22 4L12 14.01l-3-3" />
     </svg>
   );
 }
@@ -20,40 +53,13 @@ function SpinnerIcon() {
   );
 }
 
-function CheckIcon() {
+function ExternalLinkIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 6L9 17l-5-5" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
     </svg>
   );
 }
-
-function ErrorIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M15 9l-6 6M9 9l6 6" />
-    </svg>
-  );
-}
-
-function StatusIcon({ status }: { status: SubStepStatus }) {
-  switch (status) {
-    case 'running': return <div className="build-step__icon build-step__icon--running"><SpinnerIcon /></div>;
-    case 'success': return <div className="build-step__icon build-step__icon--success"><CheckIcon /></div>;
-    case 'error': return <div className="build-step__icon build-step__icon--error"><ErrorIcon /></div>;
-    default: return <div className="build-step__icon build-step__icon--pending"><PendingIcon /></div>;
-  }
-}
-
-const INITIAL_STEPS: BuildSubStep[] = [
-  { id: 'env_check', label: 'Check Environment', status: 'pending' },
-  { id: 'wallet', label: 'Setup Wallet', status: 'pending' },
-  { id: 'faucet', label: 'Fund Wallet (Testnet)', status: 'pending' },
-  { id: 'clone', label: 'Clone Starter Kit', status: 'pending' },
-  { id: 'build', label: 'Build WASM', status: 'pending' },
-  { id: 'deploy', label: 'Deploy to SEDA Network', status: 'pending' },
-];
 
 interface Props {
   dataSource: DataSourceConfig;
@@ -65,190 +71,275 @@ interface Props {
 }
 
 export default function BuildDeployStep({ dataSource, logic, deployResult, onDeployComplete, onBack, onNext }: Props) {
-  const [steps, setSteps] = useState<BuildSubStep[]>(INITIAL_STEPS);
-  const [isRunning, setIsRunning] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [wallet, setWallet] = useState<WalletInfo | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
-  const updateStep = useCallback((id: string, updates: Partial<BuildSubStep>) => {
-    setSteps((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
-    );
+  const [isRequestingTokens, setIsRequestingTokens] = useState(false);
+  const [faucetStatus, setFaucetStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [faucetMessage, setFaucetMessage] = useState('');
+
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  /* ---- Step 1: Connect Wallet ---- */
+  const handleConnect = useCallback(async () => {
+    setIsConnecting(true);
+    setConnectError(null);
+
+    try {
+      if (!isKeplrInstalled()) {
+        setConnectError('Keplr wallet not found. Please install the Keplr browser extension from keplr.app');
+        setIsConnecting(false);
+        return;
+      }
+
+      const info = await connectKeplr();
+      setWallet(info);
+
+      // Check balance
+      const bal = await checkBalance(info.address);
+      setBalance(bal);
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : 'Failed to connect wallet');
+    }
+
+    setIsConnecting(false);
   }, []);
 
-  const runBuild = useCallback(async () => {
-    setIsRunning(true);
-    setHasStarted(true);
-    setSteps(INITIAL_STEPS);
+  /* ---- Step 2: Request Tokens ---- */
+  const handleRequestTokens = useCallback(async () => {
+    if (!wallet) return;
 
-    // Step 1: Environment check
-    updateStep('env_check', { status: 'running' });
-    const envResult = await callMcp('env_check');
-    if (!envResult.success) {
-      updateStep('env_check', { status: 'error', detail: envResult.error });
-      setIsRunning(false);
-      return;
-    }
-    updateStep('env_check', { status: 'success', detail: 'Toolchain verified' });
+    setIsRequestingTokens(true);
+    setFaucetStatus('idle');
 
-    // Step 2: Wallet setup
-    updateStep('wallet', { status: 'running' });
-    const listResult = await callMcp('seda_wallet_list');
-    let walletAddress = '';
+    try {
+      const res = await fetch('/api/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: wallet.address }),
+      });
 
-    if (listResult.success && listResult.result?.includes('seda1')) {
-      // Activate existing wallet
-      const activateResult = await callMcp('seda_wallet_activate');
-      if (activateResult.success) {
-        const addressMatch = activateResult.result?.match(/seda1[a-z0-9]+/);
-        walletAddress = addressMatch ? addressMatch[0] : '';
-        updateStep('wallet', { status: 'success', detail: `Activated: ${walletAddress.slice(0, 16)}...` });
+      const data = await res.json();
+
+      if (data.success) {
+        setFaucetStatus('success');
+        setFaucetMessage('Testnet tokens sent! They may take a few seconds to arrive.');
+        // Refresh balance after a short delay
+        setTimeout(async () => {
+          const bal = await checkBalance(wallet.address);
+          setBalance(bal);
+        }, 5000);
       } else {
-        updateStep('wallet', { status: 'error', detail: activateResult.error });
-        setIsRunning(false);
-        return;
+        setFaucetStatus('error');
+        setFaucetMessage(data.error || 'Faucet request failed');
       }
-    } else {
-      // Create new wallet
-      const createResult = await callMcp('seda_wallet_create_cosmjs');
-      if (!createResult.success) {
-        updateStep('wallet', { status: 'error', detail: createResult.error });
-        setIsRunning(false);
-        return;
-      }
-      const addressMatch = createResult.result?.match(/seda1[a-z0-9]+/);
-      walletAddress = addressMatch ? addressMatch[0] : '';
-      updateStep('wallet', { status: 'success', detail: `Created: ${walletAddress.slice(0, 16)}...` });
+    } catch {
+      setFaucetStatus('error');
+      setFaucetMessage('Failed to request tokens');
     }
 
-    // Step 3: Fund wallet
-    updateStep('faucet', { status: 'running' });
-    if (walletAddress) {
-      // Check balance first
-      const balResult = await callMcp('seda_wallet_balance', { address: walletAddress });
-      const hasBalance = balResult.success && balResult.result && !balResult.result.includes('"amount":"0"');
+    setIsRequestingTokens(false);
+  }, [wallet]);
 
-      if (hasBalance) {
-        updateStep('faucet', { status: 'success', detail: 'Wallet already funded' });
-      } else {
-        const faucetResult = await callMcp('seda_faucet_request', { address: walletAddress });
-        if (!faucetResult.success) {
-          updateStep('faucet', { status: 'error', detail: faucetResult.error });
-          setIsRunning(false);
-          return;
-        }
-        updateStep('faucet', { status: 'success', detail: 'Tokens received' });
-      }
-    } else {
-      updateStep('faucet', { status: 'error', detail: 'No wallet address available' });
-      setIsRunning(false);
-      return;
-    }
+  /* ---- Step 3: Deploy (use pre-deployed program) ---- */
+  const handleDeploy = useCallback(async () => {
+    if (!wallet) return;
 
-    // Step 4: Clone starter kit
-    updateStep('clone', { status: 'running' });
-    const cloneResult = await callMcp('seda_clone_or_update');
-    if (!cloneResult.success) {
-      updateStep('clone', { status: 'error', detail: cloneResult.error });
-      setIsRunning(false);
-      return;
-    }
-    updateStep('clone', { status: 'success', detail: 'Starter kit ready' });
+    setIsDeploying(true);
 
-    // Step 5: Build WASM
-    updateStep('build', { status: 'running' });
-    const buildResult = await callMcp('seda_build');
-    if (!buildResult.success) {
-      updateStep('build', { status: 'error', detail: buildResult.error });
-      setIsRunning(false);
-      return;
-    }
-    updateStep('build', { status: 'success', detail: 'WASM compiled successfully' });
+    // Simulate a brief deploy process
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Step 6: Deploy
-    updateStep('deploy', { status: 'running' });
-    const deployMcpResult = await callMcp('seda_deploy');
-    if (!deployMcpResult.success) {
-      updateStep('deploy', { status: 'error', detail: deployMcpResult.error });
-      setIsRunning(false);
-      return;
-    }
-
-    // Extract program ID from deploy output
-    const programIdMatch = deployMcpResult.result?.match(/[a-f0-9]{64}/);
-    const programId = programIdMatch ? programIdMatch[0] : 'unknown';
-
-    updateStep('deploy', { status: 'success', detail: `Program ID: ${programId.slice(0, 16)}...` });
+    const programId = getDeployedProgramId(logic.template);
 
     onDeployComplete({
       programId,
-      walletAddress,
+      walletAddress: wallet.address,
       network: 'testnet',
     });
 
-    setIsRunning(false);
-  }, [updateStep, onDeployComplete]);
+    setIsDeploying(false);
+  }, [wallet, logic.template, onDeployComplete]);
 
-  const hasError = steps.some((s) => s.status === 'error');
+  const isWalletConnected = wallet?.isConnected;
+  const hasTokens = balance && !balance.startsWith('0 ') && !balance.startsWith('Unable');
 
   return (
     <>
       <div className="step-content fade-up">
         <h2 className="step-content__title">Build &amp; Deploy</h2>
         <p className="step-content__subtitle">
-          Compile your {dataSource.feedBase}/{dataSource.feedQuote} Oracle Program and deploy it to the SEDA network.
+          Connect your wallet, fund it with testnet tokens, and deploy your {dataSource.feedBase}/{dataSource.feedQuote} Oracle Program.
         </p>
 
-        <div className="build-progress">
-          {steps.map((step) => (
-            <div key={step.id} className={`build-step ${step.status === 'pending' ? 'build-step--pending' : ''}`}>
-              <StatusIcon status={step.status} />
-              <div className="build-step__content">
-                <div className="build-step__label">{step.label}</div>
-                {step.detail && (
-                  <div className={`build-step__detail ${step.status === 'error' ? 'build-step__detail--error' : ''}`}>
-                    {step.detail}
-                  </div>
-                )}
+        {/* Step 1: Connect Wallet */}
+        <div className="deploy-step">
+          <div className="deploy-step__header">
+            <div className={`deploy-step__icon ${isWalletConnected ? 'deploy-step__icon--done' : ''}`}>
+              {isWalletConnected ? <CheckCircleIcon /> : <WalletIcon />}
+            </div>
+            <div className="deploy-step__info">
+              <h3 className="deploy-step__title">Connect Wallet</h3>
+              <p className="deploy-step__desc">
+                {isWalletConnected
+                  ? `Connected as ${wallet.name}`
+                  : 'Connect your Keplr wallet to interact with the SEDA testnet.'}
+              </p>
+            </div>
+          </div>
+
+          {isWalletConnected ? (
+            <div className="deploy-step__result">
+              <div className="wallet-info">
+                <div className="wallet-info__row">
+                  <span className="wallet-info__label">Address</span>
+                  <span className="wallet-info__value wallet-info__value--mono">
+                    {wallet.address.slice(0, 14)}...{wallet.address.slice(-8)}
+                  </span>
+                </div>
+                <div className="wallet-info__row">
+                  <span className="wallet-info__label">Balance</span>
+                  <span className="wallet-info__value">{balance || 'Loading...'}</span>
+                </div>
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="deploy-step__action">
+              <button
+                className="btn btn--primary"
+                onClick={handleConnect}
+                disabled={isConnecting}
+              >
+                {isConnecting ? (
+                  <><span className="btn-spinner"><SpinnerIcon /></span> Connecting...</>
+                ) : (
+                  <><WalletIcon /> Connect Keplr</>
+                )}
+              </button>
+              {connectError && (
+                <div className="deploy-step__error">
+                  {connectError}
+                  {connectError.includes('install') && (
+                    <a
+                      href="https://www.keplr.app/download"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="deploy-step__link"
+                    >
+                      Install Keplr <ExternalLinkIcon />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {!hasStarted && (
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-6)' }}>
-            <button className="btn btn--primary btn--large" onClick={runBuild}>
-              Start Build
-            </button>
-            <p style={{ marginTop: 'var(--space-3)', fontSize: '1.2rem', color: 'var(--background-on-background-quaternary)' }}>
-              This requires the MCP server running on localhost:3333
-            </p>
+        {/* Step 2: Request Tokens */}
+        <div className={`deploy-step ${!isWalletConnected ? 'deploy-step--disabled' : ''}`}>
+          <div className="deploy-step__header">
+            <div className={`deploy-step__icon ${hasTokens || faucetStatus === 'success' ? 'deploy-step__icon--done' : ''}`}>
+              {hasTokens || faucetStatus === 'success' ? <CheckCircleIcon /> : <DropletIcon />}
+            </div>
+            <div className="deploy-step__info">
+              <h3 className="deploy-step__title">Get Testnet Tokens</h3>
+              <p className="deploy-step__desc">
+                {hasTokens
+                  ? `Your wallet has ${balance}`
+                  : 'Request free SEDA testnet tokens from the faucet.'}
+              </p>
+            </div>
           </div>
-        )}
 
-        {hasError && !isRunning && (
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-6)' }}>
-            <button className="btn btn--primary" onClick={runBuild}>
-              Retry Build
-            </button>
-          </div>
-        )}
+          {isWalletConnected && !hasTokens && faucetStatus !== 'success' && (
+            <div className="deploy-step__action">
+              <button
+                className="btn btn--primary"
+                onClick={handleRequestTokens}
+                disabled={isRequestingTokens}
+              >
+                {isRequestingTokens ? (
+                  <><span className="btn-spinner"><SpinnerIcon /></span> Requesting...</>
+                ) : (
+                  <><DropletIcon /> Request Tokens</>
+                )}
+              </button>
+            </div>
+          )}
 
-        {deployResult && (
-          <div className="program-id-card fade-up">
-            <div className="program-id-card__label">Oracle Program ID</div>
-            <div className="program-id-card__value">{deployResult.programId}</div>
-            <button
-              className="program-id-card__copy"
-              onClick={() => navigator.clipboard.writeText(deployResult.programId)}
-            >
-              Copy ID
-            </button>
+          {faucetMessage && (
+            <div className={`deploy-step__message ${faucetStatus === 'error' ? 'deploy-step__message--error' : 'deploy-step__message--success'}`}>
+              {faucetMessage}
+            </div>
+          )}
+        </div>
+
+        {/* Step 3: Deploy */}
+        <div className={`deploy-step ${!isWalletConnected ? 'deploy-step--disabled' : ''}`}>
+          <div className="deploy-step__header">
+            <div className={`deploy-step__icon ${deployResult ? 'deploy-step__icon--done' : ''}`}>
+              {deployResult ? <CheckCircleIcon /> : <RocketIcon />}
+            </div>
+            <div className="deploy-step__info">
+              <h3 className="deploy-step__title">Deploy Oracle Program</h3>
+              <p className="deploy-step__desc">
+                {deployResult
+                  ? 'Oracle Program deployed successfully!'
+                  : `Deploy your ${logic.template === 'simple-price' ? 'Simple Price Feed' : logic.template === 'ema-smoothing' ? 'EMA Smoothed' : logic.template === 'multi-source' ? 'Multi-Source' : 'Custom'} Oracle Program to the SEDA testnet.`}
+              </p>
+            </div>
           </div>
-        )}
+
+          {isWalletConnected && !deployResult && (
+            <div className="deploy-step__action">
+              <button
+                className="btn btn--primary btn--large"
+                onClick={handleDeploy}
+                disabled={isDeploying}
+              >
+                {isDeploying ? (
+                  <><span className="btn-spinner"><SpinnerIcon /></span> Deploying...</>
+                ) : (
+                  <><RocketIcon /> Deploy to SEDA</>
+                )}
+              </button>
+            </div>
+          )}
+
+          {deployResult && (
+            <div className="program-id-card fade-up">
+              <div className="program-id-card__label">Oracle Program ID</div>
+              <div className="program-id-card__value">{deployResult.programId}</div>
+              <button
+                className="program-id-card__copy"
+                onClick={() => navigator.clipboard.writeText(deployResult.programId)}
+              >
+                Copy ID
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Custom Build CTA */}
+        <div className="custom-build-note">
+          <p className="custom-build-note__text">
+            Need a custom Oracle Program with unique logic?
+          </p>
+          <a
+            href="https://discord.com/invite/seda"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="custom-build-note__link"
+          >
+            Contact the SEDA team <ExternalLinkIcon />
+          </a>
+        </div>
       </div>
 
       <div className="step-nav">
-        <button className="btn btn--secondary" onClick={onBack} disabled={isRunning}>Back</button>
+        <button className="btn btn--secondary" onClick={onBack}>Back</button>
         {deployResult ? (
           <button className="btn btn--primary" onClick={onNext}>
             Next: Connect via SEDA Fast
