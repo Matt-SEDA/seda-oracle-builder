@@ -69,9 +69,9 @@ export default function ConnectStep({ deployResult, onBack }: Props) {
   };
 
   const codeExamples: Record<CodeTab, { code: string; lang: string }> = {
-    curl: { code: generateCurlExample(deployResult.programId), lang: 'bash' },
-    javascript: { code: generateJsExample(deployResult.programId), lang: 'javascript' },
-    python: { code: generatePythonExample(deployResult.programId), lang: 'python' },
+    curl: { code: generateCurlExample(deployResult.programId, deployResult.execInputs), lang: 'bash' },
+    javascript: { code: generateJsExample(deployResult.programId, deployResult.execInputs), lang: 'javascript' },
+    python: { code: generatePythonExample(deployResult.programId, deployResult.execInputs), lang: 'python' },
   };
 
   return (

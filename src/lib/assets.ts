@@ -68,10 +68,10 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
  * Each program accepts Pyth price feed IDs as execInputs.
  */
 export const PROGRAM_IDS: Record<LogicTemplate, string> = {
-  'simple-price': '8cf7808cdb5d16e9fb328007968d31727f8e67ac3c83b655aa61c4ccd4077125',
-  'ema-smoothing': '8cf7808cdb5d16e9fb328007968d31727f8e67ac3c83b655aa61c4ccd4077125',
-  'multi-source': '8cf7808cdb5d16e9fb328007968d31727f8e67ac3c83b655aa61c4ccd4077125',
-  'custom': '8cf7808cdb5d16e9fb328007968d31727f8e67ac3c83b655aa61c4ccd4077125',
+  'simple-price': 'b2aec3ccfa64af1cdd218e933e31d824dde36bef1cf8954cb495c1fa47c7b96f',
+  'ema-smoothing': '992083e1b5c1bba144f0fb41c75586b9c656f68cd9200acf4521d9991fb0f95c',
+  'multi-source': '92af5af2581368c8ed0d969727e94e833c4c911291240f2af6c5089aabd026b5',
+  'custom': 'b2aec3ccfa64af1cdd218e933e31d824dde36bef1cf8954cb495c1fa47c7b96f',
 };
 
 /**
@@ -80,8 +80,6 @@ export const PROGRAM_IDS: Record<LogicTemplate, string> = {
 export function getProgramConfig(asset: Asset, template: LogicTemplate) {
   return {
     programId: PROGRAM_IDS[template],
-    execInputs: {
-      pyth_assets: [`0x${asset.pythPriceFeedId}`],
-    },
+    execInputs: asset.pythPriceFeedId,
   };
 }

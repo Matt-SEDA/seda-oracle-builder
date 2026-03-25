@@ -28,7 +28,7 @@ export async function callMcp(
 export async function callFastApi(
   programId: string,
   apiKey: string,
-  execInputs: Record<string, unknown> = {},
+  execInputs: string = '',
   network: 'testnet' | 'mainnet' = 'testnet'
 ): Promise<McpResponse> {
   try {

@@ -17,12 +17,12 @@ export interface LogicSelection {
 
 export interface CompileResult {
   programId: string;
-  execInputs: Record<string, unknown>;
+  execInputs: string;
 }
 
 export interface DeployResult {
   programId: string;
-  execInputs: Record<string, unknown>;
+  execInputs: string;
   walletAddress: string;
   network: 'testnet' | 'mainnet';
 }

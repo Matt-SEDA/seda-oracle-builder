@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleFastExecute(args: Record<string, unknown>) {
-  const { programId, apiKey, execInputs = {}, network = 'testnet' } = args;
+  const { programId, apiKey, execInputs = '', network = 'testnet' } = args;
 
   if (!programId || !apiKey) {
     return NextResponse.json(

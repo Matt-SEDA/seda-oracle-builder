@@ -211,18 +211,18 @@ impl PriceFeed {
 }`;
 }
 
-export function generateCurlExample(programId: string): string {
+export function generateCurlExample(programId: string, execInputs: string = ''): string {
   return `curl -L -X POST \\
   'https://fast-api.testnet.seda.xyz/execute?encoding=json&includeDebugInfo=true' \\
   -H 'Authorization: Bearer YOUR_API_KEY' \\
   -H 'Content-Type: application/json' \\
   --data-raw '{
     "execProgramId": "${programId}",
-    "execInputs": {}
+    "execInputs": "${execInputs}"
   }'`;
 }
 
-export function generateJsExample(programId: string): string {
+export function generateJsExample(programId: string, execInputs: string = ''): string {
   return `const response = await fetch(
   'https://fast-api.testnet.seda.xyz/execute?encoding=json',
   {
@@ -233,7 +233,7 @@ export function generateJsExample(programId: string): string {
     },
     body: JSON.stringify({
       execProgramId: '${programId}',
-      execInputs: {},
+      execInputs: '${execInputs}',
     }),
   }
 );
@@ -242,7 +242,7 @@ const data = await response.json();
 console.log('Result:', data);`;
 }
 
-export function generatePythonExample(programId: string): string {
+export function generatePythonExample(programId: string, execInputs: string = ''): string {
   return `import requests
 
 response = requests.post(
@@ -254,7 +254,7 @@ response = requests.post(
     },
     json={
         "execProgramId": "${programId}",
-        "execInputs": {},
+        "execInputs": "${execInputs}",
     },
 )
 
