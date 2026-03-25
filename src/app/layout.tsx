@@ -4,7 +4,19 @@ import Navbar from '@/components/Navbar';
 
 export const metadata: Metadata = {
   title: 'SEDA Oracle Program Builder',
-  description: 'Build and deploy SEDA Oracle Programs with an interactive step-by-step wizard. Connect data feeds, configure logic, and deploy to SEDA Fast.',
+  description: 'Build and deploy a SEDA Oracle Program in minutes. Select an asset, choose your logic, and connect via SEDA Fast with sub-50ms latency.',
+  metadataBase: new URL('https://seda-oracle-builder.vercel.app'),
+  openGraph: {
+    title: 'SEDA Oracle Program Builder',
+    description: 'Build and deploy a SEDA Oracle Program in minutes. Select an asset, choose your logic, and connect via SEDA Fast with sub-50ms latency.',
+    siteName: 'SEDA',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SEDA Oracle Program Builder',
+    description: 'Build and deploy a SEDA Oracle Program in minutes. Select an asset, choose your logic, and connect via SEDA Fast with sub-50ms latency.',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
