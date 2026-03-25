@@ -243,6 +243,22 @@ export default function ConnectStep({ deployResult, assetSymbol, onBack }: Props
             </div>
           )}
           {testResult && (
+            <div className="custom-oracle-cta fade-up">
+              <div className="custom-oracle-cta__content">
+                <h4 className="custom-oracle-cta__title">Need more than a price feed?</h4>
+                <p className="custom-oracle-cta__text">Build a custom Oracle Program with your own data sources, logic, and delivery methods.</p>
+              </div>
+              <a
+                href="https://docs.seda.xyz/home/for-developers/build-or-access-oracle-programs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn--primary"
+              >
+                Build A Custom Oracle Program <ExternalLinkIcon />
+              </a>
+            </div>
+          )}
+          {testResult && (
             <details className="test-panel__details">
               <summary className="test-panel__summary">Raw API Response</summary>
               <div className="test-panel__result">{testResult}</div>

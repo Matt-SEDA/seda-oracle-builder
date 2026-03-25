@@ -271,9 +271,27 @@ input, select, textarea { font-family: inherit; }
   margin: 0 auto;
 }
 
+.hero__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: 0 var(--space-6);
+  height: 44px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--primary-on-primary);
+  background: var(--primary-primary);
+  border-radius: 10px;
+  transition: background 200ms ease;
+}
+
+.hero__cta:hover { background: var(--primary-hover-primary); }
+
 @media (min-width: 640px) {
   .hero__title { font-size: 3.6rem; }
   .hero__subtitle { font-size: 1.6rem; }
+  .hero__cta { height: 48px; font-size: 1.5rem; padding: 0 var(--space-8); border-radius: 12px; }
 }
 
 /* ============================================================
@@ -1194,6 +1212,40 @@ input, select, textarea { font-family: inherit; }
 
 .test-panel__details .test-panel__result {
   margin-top: var(--space-2);
+}
+
+/* ---- Custom Oracle CTA (post-execution) ---- */
+.custom-oracle-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  background: var(--primary-primary-container);
+  border: 1px solid rgba(97, 0, 255, 0.2);
+  border-radius: 12px;
+  margin-bottom: var(--space-4);
+}
+
+.custom-oracle-cta__content { flex: 1; }
+
+.custom-oracle-cta__title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--background-on-background);
+  margin-bottom: var(--space-1);
+}
+
+.custom-oracle-cta__text {
+  font-size: 1.2rem;
+  color: var(--background-on-background-tertiary);
+  line-height: 1.4;
+}
+
+.custom-oracle-cta .btn { flex-shrink: 0; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .custom-oracle-cta { flex-direction: column; text-align: center; }
+  .custom-oracle-cta .btn { width: 100%; }
 }
 
 /* ---- Code tabs ---- */

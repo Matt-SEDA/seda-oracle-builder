@@ -74,6 +74,17 @@ export default function OracleBuilder() {
         <p className="hero__subtitle">
           Build and deploy a SEDA Oracle Program in minutes. Select an asset, choose your logic, and connect via SEDA Fast.
         </p>
+        <a
+          href="https://docs.seda.xyz/home/for-developers/build-or-access-oracle-programs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hero__cta"
+        >
+          Build A Custom Oracle Program
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+          </svg>
+        </a>
       </div>
 
       <StepIndicator currentStep={state.currentStep} completedSteps={completedSteps} />
