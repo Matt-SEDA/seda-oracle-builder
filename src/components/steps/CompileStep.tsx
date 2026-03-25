@@ -126,7 +126,10 @@ export default function CompileStep({
 
     for (let i = 0; i < COMPILE_STAGES.length; i++) {
       setCompileStage(i);
-      await new Promise((r) => setTimeout(r, 400 + Math.random() * 300));
+      // Random delay: 800ms–5000ms per stage, heavier steps take longer
+      const base = i === 4 || i === 5 ? 1500 : 800; // "Compiling" and "Optimizing" feel heavier
+      const jitter = Math.random() * (i === 4 ? 3500 : 2500);
+      await new Promise((r) => setTimeout(r, base + jitter));
     }
 
     const config = getProgramConfig(asset.asset, logic.template);
@@ -200,13 +203,21 @@ export default function CompileStep({
   }, [wallet]);
 
   /* ---- Deploy ---- */
-  const handleDeploy = useCallback(() => {
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  const handleDeploy = useCallback(async () => {
     if (!wallet || !compileResult) return;
+    setIsDeploying(true);
+
+    // Simulate deployment time (3–5 seconds)
+    await new Promise((r) => setTimeout(r, 3000 + Math.random() * 2000));
+
     onDeployComplete({
       ...compileResult,
       walletAddress: wallet.address,
       network: 'testnet',
     });
+    setIsDeploying(false);
   }, [wallet, compileResult, onDeployComplete]);
 
   const isWalletConnected = wallet?.isConnected;
@@ -369,21 +380,21 @@ export default function CompileStep({
           {/* Deploy */}
           <div className={`deploy-step ${!isWalletConnected ? 'deploy-step--disabled' : ''}`}>
             <div className="deploy-step__header">
-              <div className={`deploy-step__icon ${deployResult ? 'deploy-step__icon--done' : ''}`}>
-                {deployResult ? <CheckCircleIcon /> : <RocketIcon />}
+              <div className={`deploy-step__icon ${deployResult ? 'deploy-step__icon--done' : isDeploying ? 'deploy-step__icon--deploying' : ''}`}>
+                {deployResult ? <CheckCircleIcon /> : isDeploying ? <span className="btn-spinner"><SpinnerIcon /></span> : <RocketIcon />}
               </div>
               <div className="deploy-step__info">
                 <h3 className="deploy-step__title">Deploy Oracle Program</h3>
                 <p className="deploy-step__desc">
-                  {deployResult ? 'Oracle Program deployed to SEDA testnet!' : 'Deploy your compiled program to the SEDA network.'}
+                  {deployResult ? 'Oracle Program deployed to SEDA testnet!' : isDeploying ? 'Deploying to SEDA network...' : 'Deploy your compiled program to the SEDA network.'}
                 </p>
               </div>
             </div>
 
             {isWalletConnected && !deployResult && (
               <div className="deploy-step__action">
-                <button className="btn btn--primary btn--large" onClick={handleDeploy}>
-                  <RocketIcon /> Deploy to SEDA
+                <button className="btn btn--primary btn--large" onClick={handleDeploy} disabled={isDeploying}>
+                  {isDeploying ? <><span className="btn-spinner"><SpinnerIcon /></span> Deploying...</> : <><RocketIcon /> Deploy to SEDA</>}
                 </button>
               </div>
             )}
