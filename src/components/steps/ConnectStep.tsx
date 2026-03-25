@@ -36,8 +36,8 @@ interface Props {
 }
 
 /**
- * Convert a hex string (big-endian u128) to a number scaled down by 1e6.
- * The tally phase outputs price as big-endian u128 bytes scaled to 6 decimals.
+ * Convert a hex string (big-endian u128) to a USD price.
+ * The tally phase outputs price scaled to 6 decimal places.
  */
 function hexToPrice(hex: string): number | null {
   try {
@@ -46,7 +46,6 @@ function hexToPrice(hex: string): number | null {
     const value = BigInt('0x' + clean);
     if (value === BigInt(0)) return null;
     const price = Number(value) / 1_000_000;
-    // Sanity check: price should be between $0.0001 and $1,000,000
     if (price < 0.0001 || price > 1_000_000_000) return null;
     return price;
   } catch {
@@ -55,74 +54,54 @@ function hexToPrice(hex: string): number | null {
 }
 
 /**
- * Convert a base64 string (big-endian u128 bytes) to a price.
- */
-function base64ToPrice(b64: string): number | null {
-  try {
-    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-    if (bytes.length === 0) return null;
-    let hex = '';
-    for (const b of bytes) hex += b.toString(16).padStart(2, '0');
-    return hexToPrice(hex);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Try to extract a human-readable USD price from the SEDA Fast API response.
- * The Oracle Program reports price as big-endian u128 scaled to 6 decimal places.
- * The Fast API returns the result in various encodings depending on params.
+ * Extract human-readable USD price from the SEDA Fast API response.
+ *
+ * Real response shape (with encoding=json):
+ * {
+ *   data: {
+ *     dataResult: { result: "00000000000000000000000080dc0310", exitCode: 0 },
+ *     execute: { stdout: "...scaled_result=2161902352\n", exitCode: 0 },
+ *     tally: { stdout: "Received price: 2161902352\n", exitCode: 0 }
+ *   }
+ * }
+ *
+ * dataResult.result is the big-endian hex u128 scaled to 6 decimals.
  */
 function parsePrice(rawResult: string): number | null {
   try {
     const data = JSON.parse(rawResult);
 
-    // Collect all candidate result strings to try parsing
-    const candidates: string[] = [];
-
-    // Direct result field (common Fast API response shape)
-    if (typeof data?.result === 'string') candidates.push(data.result);
-    // Nested result.result
-    if (typeof data?.result?.result === 'string') candidates.push(data.result.result);
-    // exitCode at top level with result
-    if (typeof data?.exitCode === 'number' && typeof data?.result === 'string') {
-      candidates.push(data.result);
-    }
-    // SEDA Fast may return tallyResult or execResult
-    if (typeof data?.tallyResult === 'string') candidates.push(data.tallyResult);
-    if (typeof data?.execResult === 'string') candidates.push(data.execResult);
-    // Array of results
-    if (Array.isArray(data?.results)) {
-      for (const r of data.results) {
-        if (typeof r?.result === 'string') candidates.push(r.result);
-        if (typeof r === 'string') candidates.push(r);
-      }
+    // Primary path: data.dataResult.result (hex-encoded big-endian u128)
+    const drResult = data?.data?.dataResult?.result;
+    if (typeof drResult === 'string' && /^[0-9a-fA-F]+$/.test(drResult)) {
+      const price = hexToPrice(drResult);
+      if (price !== null) return price;
     }
 
-    // Try each candidate as hex first, then base64
-    for (const c of candidates) {
-      if (!c) continue;
-      // Hex string (0x prefix or pure hex)
-      if (/^(0x)?[0-9a-fA-F]+$/.test(c)) {
-        const price = hexToPrice(c);
-        if (price !== null) return price;
-      }
-      // Base64 string
-      if (/^[A-Za-z0-9+/]+=*$/.test(c) && c.length >= 4) {
-        const price = base64ToPrice(c);
-        if (price !== null) return price;
-      }
-      // Numeric string (already a number)
-      if (/^\d+$/.test(c)) {
-        const val = Number(BigInt(c)) / 1_000_000;
+    // Fallback: parse scaled_result from execute stdout
+    const execStdout = data?.data?.execute?.stdout;
+    if (typeof execStdout === 'string') {
+      const match = execStdout.match(/scaled_result=(\d+)/);
+      if (match) {
+        const val = Number(BigInt(match[1])) / 1_000_000;
         if (val > 0.0001 && val < 1_000_000_000) return val;
       }
     }
 
-    // If result is a number directly
-    if (typeof data?.result === 'number' && data.result > 0) {
-      return data.result / 1_000_000;
+    // Fallback: parse "Received price:" from tally stdout
+    const tallyStdout = data?.data?.tally?.stdout;
+    if (typeof tallyStdout === 'string') {
+      const match = tallyStdout.match(/Received price:\s*(\d+)/);
+      if (match) {
+        const val = Number(BigInt(match[1])) / 1_000_000;
+        if (val > 0.0001 && val < 1_000_000_000) return val;
+      }
+    }
+
+    // Fallback: top-level result hex (older response shapes)
+    if (typeof data?.result === 'string' && /^(0x)?[0-9a-fA-F]+$/.test(data.result)) {
+      const price = hexToPrice(data.result);
+      if (price !== null) return price;
     }
 
     return null;
