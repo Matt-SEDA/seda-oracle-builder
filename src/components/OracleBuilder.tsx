@@ -107,9 +107,10 @@ export default function OracleBuilder() {
         />
       )}
 
-      {state.currentStep === 4 && state.deployResult && (
+      {state.currentStep === 4 && state.deployResult && state.asset && (
         <ConnectStep
           deployResult={state.deployResult}
+          assetSymbol={state.asset.asset.symbol}
           onBack={() => dispatch({ type: 'GO_BACK' })}
         />
       )}

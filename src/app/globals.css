@@ -1095,6 +1095,43 @@ input, select, textarea { font-family: inherit; }
   color: var(--danger-danger);
 }
 
+/* ---- Price result card ---- */
+.price-result {
+  text-align: center;
+  padding: var(--space-6);
+  background: rgba(31, 233, 209, 0.04);
+  border: 1px solid rgba(31, 233, 209, 0.15);
+  border-radius: 12px;
+  margin-bottom: var(--space-4);
+}
+
+.price-result__pair {
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--success-success);
+  margin-bottom: var(--space-2);
+}
+
+.price-result__value {
+  font-family: var(--font-mono);
+  font-size: 3.2rem;
+  font-weight: 700;
+  color: var(--background-on-background);
+  letter-spacing: -0.02em;
+}
+
+.price-result__source {
+  font-size: 1.1rem;
+  color: var(--background-on-background-quaternary);
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 640px) {
+  .price-result__value { font-size: 4rem; }
+}
+
 /* ---- Code tabs ---- */
 .code-tabs {
   margin-bottom: var(--space-4);

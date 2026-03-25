@@ -31,16 +31,63 @@ type CodeTab = 'curl' | 'javascript' | 'python';
 
 interface Props {
   deployResult: DeployResult;
+  assetSymbol: string;
   onBack: () => void;
 }
 
-export default function ConnectStep({ deployResult, onBack }: Props) {
+/**
+ * Try to extract a human-readable USD price from the SEDA Fast API response.
+ * The Oracle Program reports price scaled to 6 decimal places as u128 bytes.
+ * The Fast API with encoding=json returns the result in various formats.
+ */
+function parsePrice(rawResult: string): number | null {
+  try {
+    const data = JSON.parse(rawResult);
+
+    // The result may contain exitCode and result fields
+    // result could be a hex string, base64, or contain the bytes
+    const result = data?.result;
+
+    if (!result) return null;
+
+    // If result is a hex string (0x...)
+    if (typeof result === 'string' && result.startsWith('0x')) {
+      const hex = result.slice(2);
+      const value = BigInt('0x' + hex);
+      return Number(value) / 1_000_000;
+    }
+
+    // If result has a bytes/data field
+    if (result.result && typeof result.result === 'string' && result.result.startsWith('0x')) {
+      const hex = result.result.slice(2);
+      const value = BigInt('0x' + hex);
+      return Number(value) / 1_000_000;
+    }
+
+    // Try parsing numeric string directly
+    if (typeof result === 'string' && /^\d+$/.test(result)) {
+      return Number(BigInt(result)) / 1_000_000;
+    }
+
+    // If it's a number already
+    if (typeof result === 'number') {
+      return result / 1_000_000;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export default function ConnectStep({ deployResult, assetSymbol, onBack }: Props) {
   const [apiKey, setApiKey] = useState('');
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [activeTab, setActiveTab] = useState<CodeTab>('curl');
   const [copied, setCopied] = useState(false);
+  const [parsedPrice, setParsedPrice] = useState<number | null>(null);
 
   const handleTest = async () => {
     if (!apiKey.trim()) return;
@@ -55,9 +102,12 @@ export default function ConnectStep({ deployResult, onBack }: Props) {
     );
 
     if (result.success) {
-      setTestResult(typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2));
+      const raw = typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2);
+      setTestResult(raw);
+      setParsedPrice(parsePrice(raw));
     } else {
       setTestError(result.error || 'Unknown error');
+      setParsedPrice(null);
     }
     setIsTesting(false);
   };
@@ -123,6 +173,15 @@ export default function ConnectStep({ deployResult, onBack }: Props) {
               {isTesting ? 'Executing...' : 'Execute'}
             </button>
           </div>
+          {testResult && parsedPrice !== null && (
+            <div className="price-result fade-up">
+              <div className="price-result__pair">{assetSymbol}/USD</div>
+              <div className="price-result__value">
+                ${parsedPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+              </div>
+              <div className="price-result__source">via SEDA Oracle Program</div>
+            </div>
+          )}
           {testResult && <div className="test-panel__result">{testResult}</div>}
           {testError && <div className="test-panel__result test-panel__error">{testError}</div>}
         </div>
